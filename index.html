@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Trail Following Cursor</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        /* Custom styles for the page and cursor effect */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111;
+            color: #fff;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden; /* Prevents scrollbars from appearing */
+            cursor: none; /* Hide the default cursor */
+        }
+        .image-trail-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        /* Styling for the images in the trail */
+        .trail-image {
+            position: absolute;
+            width: 150px; /* Width of the trail images */
+            height: 200px; /* Height of the trail images */
+            object-fit: cover;
+            border-radius: 0.75rem; /* Rounded corners for the images */
+            pointer-events: none; /* Ensures images don't block mouse events */
+            transform: translate(-50%, -50%); /* Center the image on the cursor */
+            opacity: 0; /* Start with the image being invisible */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        /* Custom cursor dot */
+        .cursor-dot {
+            width: 10px;
+            height: 10px;
+            background-color: white;
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            transition: transform 0.1s ease-out;
+        }
+        /* Instructions text styling */
+        .instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 1;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Container for the trail effect -->
+    <div id="image-trail-container" class="image-trail-container">
+        <!-- Instructions to the user -->
+        <div class="instructions">
+            <h1 class="text-4xl md:text-xl font-bold mb-4">Cursor Image Trail Effect  |  Created By I.A. Muhamad Shkeir</h1>
+            <p class="text-lg md:text-xl text-gray-300">© #015 · MS-ANIM.EF.DEV-D-2025-07-001 · Muhamad Shkeir
+</p>
+        </div>
+    </div>
+
+    <!-- Custom cursor element -->
+    <div id="cursor-dot" class="cursor-dot"></div>
+
+    <script>
+        // Wait for the window to load before running the script
+        window.onload = function() {
+            const container = document.getElementById('image-trail-container');
+            const cursorDot = document.getElementById('cursor-dot');
+
+            // Array of image URLs to be used in the trail
+            // Using placeholder images with a similar theme to your example
+            const images = [
+                'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1887&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1964&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=1887&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1887&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1887&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=1887&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1887&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop'
+            ];
+
+            let imageIndex = 0; // To cycle through the images array
+
+            // Listen for mouse movement on the whole window
+            window.addEventListener('mousemove', (e) => {
+                const { clientX, clientY } = e;
+
+                // Move the custom cursor dot
+                gsap.to(cursorDot, {
+                    x: clientX,
+                    y: clientY,
+                    duration: 0.2,
+                    ease: 'power2.out'
+                });
+                
+                // Create a new image element for the trail
+                const img = document.createElement('img');
+                img.src = images[imageIndex];
+                img.className = 'trail-image';
+                container.appendChild(img);
+
+                // Update the index for the next image, looping back to the start
+                imageIndex = (imageIndex + 1) % images.length;
+
+                // Use GSAP to animate the image's appearance and disappearance
+                gsap.set(img, {
+                    left: clientX + 'px',
+                    top: clientY + 'px',
+                });
+
+                // Animate the image
+                gsap.to(img, {
+                    duration: 2.0, // How long the animation lasts
+                    opacity: 1, // Fade in
+                    scale: 1.7, // Scale up slightly
+                    y: '+=40', // Move down
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        // Fade out and remove the image after the animation
+                        gsap.to(img, {
+                            duration: 0.2,
+                            opacity: 0,
+                            onComplete: () => {
+                                container.removeChild(img);
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Handle window resizing to ensure the effect remains centered
+            window.addEventListener('resize', () => {
+                // This can be used to re-center elements if needed,
+                // but absolute positioning handles most cases.
+            });
+        };
+    </script>
+
+</body>
+</html>

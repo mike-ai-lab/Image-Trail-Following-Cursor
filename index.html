@@ -3,51 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Trail Following Cursor</title>
+    <title>Image Trail with Beat-Synchronized Animation and Flashing Background</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- GSAP for animations -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
-        /* Custom styles for the page and cursor effect */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #111;
             color: #fff;
             margin: 0;
             height: 100vh;
-            overflow: hidden; /* Prevents scrollbars from appearing */
-            cursor: none; /* Hide the default cursor */
+            overflow: hidden;
+            cursor: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
         }
-        .image-trail-container {
-            position: relative;
+
+        .flashing-background {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
+            background-color: transparent;
+            opacity: 0;
+            z-index: 0;
+            pointer-events: none;
         }
-        /* Styling for the images in the trail */
+
+        .image-trail-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            transition: box-shadow 0.1s ease-out;
+            z-index: 1;
+        }
+
         .trail-image {
             position: absolute;
-            width: 150px; /* Width of the trail images */
-            height: 200px; /* Height of the trail images */
+            width: 150px;
+            height: 200px;
             object-fit: cover;
-            border-radius: 0.75rem; /* Rounded corners for the images */
-            pointer-events: none; /* Ensures images don't block mouse events */
-            transform: translate(-50%, -50%); /* Center the image on the cursor */
-            opacity: 0; /* Start with the image being invisible */
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border-radius: 0.75rem;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            opacity: 0;
         }
-        /* Custom cursor dot */
+
         .cursor-dot {
             width: 10px;
             height: 10px;
             background-color: white;
             border-radius: 50%;
             position: fixed;
+            top: 0;
+            left: 0;
             pointer-events: none;
             transform: translate(-50%, -50%);
             z-index: 9999;
-            transition: transform 0.1s ease-out;
+            transition: transform 0.05s linear;
+            will-change: transform;
         }
+
         /* Instructions text styling */
         .instructions {
             position: absolute;
@@ -55,34 +80,117 @@
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
-            z-index: 1;
+            z-index: 2; /* Above image trail container */
             pointer-events: none;
+        }
+        /* Button container for consistent spacing */
+        .button-container {
+            position: absolute;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem; /* Space between buttons */
+            z-index: 1000;
+        }
+        /* Play/Pause button styling */
+        .control-button {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .control-button:hover {
+            background-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        }
+        .control-button svg {
+            fill: white;
+            width: 24px;
+            height: 24px;
+        }
+        /* Specific styling for the background toggle button */
+        #toggle-bg-button {
+            background-color: rgba(100, 100, 255, 0.2); /* A different color for distinction */
+        }
+        #toggle-bg-button:hover {
+            background-color: rgba(100, 100, 255, 0.4);
         }
     </style>
 </head>
 <body>
 
+    <!-- Animated background overlay -->
+    <div id="flashing-background" class="flashing-background"></div>
+
     <!-- Container for the trail effect -->
     <div id="image-trail-container" class="image-trail-container">
         <!-- Instructions to the user -->
         <div class="instructions">
-            <h1 class="text-4xl md:text-xl font-bold mb-4">Cursor Image Trail Effect  |  Created By I.A. Muhamad Shkeir</h1>
-            <p class="text-lg md:text-xl text-gray-300">© #015 · MS-ANIM.EF.DEV-D-2025-07-001 · Muhamad Shkeir
-</p>
+            <h1 class="text-4xl md:text-xl font-bold mb-4">Cursor Image Trail Effect | Created By I.A. Muhamad Shkeir</h1>
+            <p class="text-lg md:text-xl text-gray-300">© #015 · MS-ANIM.EF.DEV-D-2025-07-001 · Muhamad Shkeir</p>
         </div>
     </div>
 
     <!-- Custom cursor element -->
     <div id="cursor-dot" class="cursor-dot"></div>
 
+    <!-- Button Container -->
+    <div class="button-container">
+        <!-- Play/Pause Button -->
+        <button id="play-pause-button" class="control-button">
+            <!-- Play icon (default) -->
+            <svg id="play-icon" viewBox="0 0 24 24" style="display: block;">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+            <!-- Pause icon -->
+            <svg id="pause-icon" viewBox="0 0 24 24" style="display: none;">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+            </svg>
+        </button>
+
+        <!-- Toggle Background Button -->
+        <button id="toggle-bg-button" class="control-button">
+            <!-- Lightbulb icon for background toggle -->
+            <svg id="bg-on-icon" viewBox="0 0 24 24" style="display: block;">
+                <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.69 2 6 4.69 6 8c0 2.42 1.23 4.58 3.09 5.76C9.69 14.28 10 14.88 10 15.5V17h4v-1.5c0-.62.31-1.22.91-1.74C16.77 12.58 18 10.42 18 8c0-3.31-2.69-6-6-6z"/>
+            </svg>
+            <svg id="bg-off-icon" viewBox="0 0 24 24" style="display: none;">
+                <path d="M12 2C8.69 2 6 4.69 6 8c0 2.42 1.23 4.58 3.09 5.76C9.69 14.28 10 14.88 10 15.5V17h4v-1.5c0-.62.31-1.22.91-1.74C16.77 12.58 18 10.42 18 8c0-3.31-2.69-6-6-6zm-1 19c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zM2.81 2.81L1.39 4.22 4.22 7.05C3.31 8.22 3 9.59 3 11c0 3.31 2.69 6 6 6h.5l-2.78 2.78 1.41 1.41L12 17.41l5.78 5.78 1.41-1.41L4.22 4.22 2.81 2.81z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Audio Element (hidden) -->
+    <audio id="background-audio" loop preload="auto">
+        <!-- IMPORTANT: Replace this URL with the direct URL to your hosted "Sia - Elastic Heart" song. -->
+        <!-- Example placeholder audio. This will NOT play "Sia - Elastic Heart". -->
+        <source src="https://raw.githubusercontent.com/mike-ai-lab/Image-Trail-Following-Cursor/main/sia-elastic-heart.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
     <script>
         // Wait for the window to load before running the script
         window.onload = function() {
             const container = document.getElementById('image-trail-container');
             const cursorDot = document.getElementById('cursor-dot');
+            const playPauseButton = document.getElementById('play-pause-button');
+            const playIcon = document.getElementById('play-icon');
+            const pauseIcon = document.getElementById('pause-icon');
+            const backgroundAudio = document.getElementById('background-audio');
+            const toggleBgButton = document.getElementById('toggle-bg-button');
+            const bgOnIcon = document.getElementById('bg-on-icon');
+            const bgOffIcon = document.getElementById('bg-off-icon');
+            const flashingBackground = document.getElementById('flashing-background');
 
             // Array of image URLs to be used in the trail
-            // Using placeholder images with a similar theme to your example
             const images = [
                 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1887&auto=format&fit=crop',
                 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1964&auto=format&fit=crop',
@@ -94,21 +202,31 @@
                 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop'
             ];
 
+            // Colors for the flashing background effect
+            const flashingColors = [
+                '#FF0000', // Red
+                '#00FF00', // Green
+                '#0000FF', // Blue
+                '#FFFF00', // Yellow
+                '#FF00FF', // Magenta
+                '#00FFFF'  // Cyan
+            ];
+            let currentColorIndex = 0; // To cycle through flashing colors
+
             let imageIndex = 0; // To cycle through the images array
+            let lastMouseX = window.innerWidth / 2; // Initial X position (center)
+            let lastMouseY = window.innerHeight / 2; // Initial Y position (center)
+            let animationInterval; // Variable to hold the interval ID for beat animation
+            let backgroundActive = false; // State for background toggle
 
-            // Listen for mouse movement on the whole window
-            window.addEventListener('mousemove', (e) => {
-                const { clientX, clientY } = e;
+            // Define the beat interval in milliseconds.
+            // IMPORTANT: You will need to adjust this value to match the exact tempo (BPM) of "Sia - Elastic Heart".
+            // A faster tempo means a smaller interval. For example, 500ms for 120 BPM.
+            // You might need to experiment with this value for the best visual synchronization.
+            const beatInterval = 500; // Example: 500ms for a simulated beat (120 BPM)
 
-                // Move the custom cursor dot
-                gsap.to(cursorDot, {
-                    x: clientX,
-                    y: clientY,
-                    duration: 0.2,
-                    ease: 'power2.out'
-                });
-                
-                // Create a new image element for the trail
+            // Function to create and animate an image at a given position
+            function createImageAtPosition(x, y) {
                 const img = document.createElement('img');
                 img.src = images[imageIndex];
                 img.className = 'trail-image';
@@ -119,28 +237,165 @@
 
                 // Use GSAP to animate the image's appearance and disappearance
                 gsap.set(img, {
-                    left: clientX + 'px',
-                    top: clientY + 'px',
+                    left: x + 'px',
+                    top: y + 'px',
                 });
 
-                // Animate the image
-                gsap.to(img, {
-                    duration: 2.0, // How long the animation lasts
-                    opacity: 1, // Fade in
-                    scale: 1.7, // Scale up slightly
-                    y: '+=40', // Move down
-                    ease: 'power2.out',
-                    onComplete: () => {
-                        // Fade out and remove the image after the animation
-                        gsap.to(img, {
-                            duration: 0.2,
-                            opacity: 0,
+                // Animate the image with more pronounced effects
+                gsap.timeline()
+                    .to(img, {
+                        duration: 0.3, // Quicker fade-in
+                        opacity: 1, // Fade in
+                        scale: 2.0, // More pronounced scale
+                        y: '+=40', // Move down
+                        rotation: (Math.random() - 0.5) * 20, // Random slight rotation (-10 to +10 degrees)
+                        ease: 'power2.out',
+                    })
+                    .to(img, {
+                        duration: 0.5, // Fade out faster
+                        opacity: 0,
+                        scale: 1.0, // Return to original scale while fading
+                        y: '+=20', // Continue moving down slightly
+                        ease: 'power1.in',
+                        onComplete: () => {
+                            container.removeChild(img);
+                        }
+                    }, "+=0.5"); // Start fading out after 0.5s delay from the end of the first animation
+            }
+
+            // Listen for mouse movement on the whole window to update cursor dot and last known position
+            window.addEventListener('mousemove', (e) => {
+                const { clientX, clientY } = e;
+                lastMouseX = clientX;
+                lastMouseY = clientY;
+
+                // Move the custom cursor dot
+                gsap.to(cursorDot, {
+                    x: clientX,
+                    y: clientY,
+                    duration: 0.2,
+                    ease: 'power2.out'
+                });
+            });
+
+            // Function to start the beat-synchronized image animation and container pulse
+            function startBeatAnimation() {
+                // Clear any existing interval to prevent multiple intervals running
+                if (animationInterval) {
+                    clearInterval(animationInterval);
+                }
+                animationInterval = setInterval(() => {
+                    // Create an image at the last known mouse position
+                    createImageAtPosition(lastMouseX, lastMouseY);
+
+                    // Add a subtle pulse effect to the container's box-shadow
+                    gsap.timeline()
+                        .to(container, {
+                            duration: 0.1, // Quick pulse in
+                            boxShadow: '0 0 40px rgba(255,255,255,0.5), 0 0 80px rgba(255,255,255,0.3)', // Brighter shadow
+                            ease: 'power1.out'
+                        })
+                        .to(container, {
+                            duration: 0.4, // Fade out pulse
+                            boxShadow: '0 10px 20px rgba(0,0,0,0.3)', // Back to original
+                            ease: 'power1.in'
+                        });
+
+                    // Flashing background animation if active
+                    if (backgroundActive) {
+                        currentColorIndex = (currentColorIndex + 1) % flashingColors.length;
+                        gsap.to(flashingBackground, {
+                            duration: 0.1, // Quick flash
+                            backgroundColor: flashingColors[currentColorIndex],
+                            opacity: 0.4, // Flash with some opacity
+                            ease: 'power1.out',
                             onComplete: () => {
-                                container.removeChild(img);
+                                gsap.to(flashingBackground, {
+                                    duration: beatInterval * 0.8, // Fade out over most of the beat interval
+                                    opacity: 0,
+                                    ease: 'power1.in'
+                                });
                             }
                         });
                     }
-                });
+
+                }, beatInterval);
+            }
+
+            // Function to stop the beat-synchronized image animation
+            function stopBeatAnimation() {
+                if (animationInterval) {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                    // Ensure the box-shadow returns to normal when stopped
+                    gsap.to(container, {
+                        duration: 0.3,
+                        boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
+                        ease: 'power1.out'
+                    });
+                    // Stop flashing background animation and reset its state
+                    gsap.to(flashingBackground, {
+                        duration: 0.3,
+                        opacity: 0,
+                        backgroundColor: 'transparent',
+                        ease: 'power1.out'
+                    });
+                }
+            }
+
+            // Toggle play/pause functionality
+            playPauseButton.addEventListener('click', async () => { // Made the function async
+                if (backgroundAudio.paused) {
+                    try {
+                        await backgroundAudio.play(); // Await the play promise
+                        playIcon.style.display = 'none';
+                        pauseIcon.style.display = 'block';
+                        startBeatAnimation(); // Start animation only after play is successful
+                    } catch (error) {
+                        // Handle the AbortError gracefully, or other play errors
+                        if (error.name === 'AbortError') {
+                            console.warn('Audio play was interrupted (likely by a rapid pause).');
+                        } else {
+                            console.error('Error playing audio:', error);
+                        }
+                    }
+                } else {
+                    backgroundAudio.pause();
+                    playIcon.style.display = 'block';
+                    pauseIcon.style.display = 'none';
+                    stopBeatAnimation(); // Stop animation when audio pauses
+                }
+            });
+
+            // Toggle background functionality
+            toggleBgButton.addEventListener('click', () => {
+                backgroundActive = !backgroundActive; // Toggle the state
+                if (backgroundActive) {
+                    // Show flashing background, hide default body background
+                    document.body.style.backgroundColor = 'transparent';
+                    flashingBackground.style.opacity = 0; // Ensure it starts transparent for the first flash
+                    bgOnIcon.style.display = 'block';
+                    bgOffIcon.style.display = 'none';
+                    if (!backgroundAudio.paused) { // Only start flashing if audio is playing
+                        startBeatAnimation(); // Restart interval to include background flashing
+                    }
+                } else {
+                    // Hide flashing background, revert to default body background
+                    document.body.style.backgroundColor = '#111';
+                    gsap.to(flashingBackground, {
+                        duration: 0.3,
+                        opacity: 0,
+                        backgroundColor: 'transparent',
+                        ease: 'power1.out'
+                    });
+                    bgOnIcon.style.display = 'none';
+                    bgOffIcon.style.display = 'block';
+                    if (!backgroundAudio.paused) { // If audio is playing, restart interval without background flashing
+                        startBeatAnimation(); // Restart interval to exclude background flashing
+                    } else {
+                        stopBeatAnimation(); // If audio is paused, stop all animations
+                    }
+                }
             });
 
             // Handle window resizing to ensure the effect remains centered
